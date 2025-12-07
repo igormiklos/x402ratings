@@ -11,7 +11,7 @@ const supabase = createClient(
 export default function Home() {
   const [services, setServices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [formOpen, setFormOpen] = useState(false)
+  const [formOpen, setFormOpen] = useState(false) 
 
   async function loadServices() {
     const { data } = await supabase
