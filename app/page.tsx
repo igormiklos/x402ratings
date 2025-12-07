@@ -31,7 +31,7 @@ export default function Home() {
     const form = e.currentTarget
     const formData = new FormData(form)
     
-    await supabase.from('services').insert({
+    await supabase.from('services').insert({ 
       url: formData.get('url'),
       name: formData.get('name'),
       description: formData.get('description') || null,
