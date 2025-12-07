@@ -21,7 +21,7 @@ export default function Home() {
     setServices(data || [])
     setLoading(false)
   }
-
+ 
   useEffect(() => {
     loadServices()
   }, [])
