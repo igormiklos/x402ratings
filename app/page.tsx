@@ -1,9 +1,7 @@
 "use client";
-
 import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
-import   { Auth } from "@supabase/auth-ui-react";
+
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
