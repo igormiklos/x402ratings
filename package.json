@@ -9,13 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.4",
-    "wagmi": "^2.12.6",
-    "viem": "^2.21.1",
     "@rainbow-me/rainbowkit": "^2.1.5",
+    "@supabase/supabase-js": "^2.45.4",
     "next": "16.0.7",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "viem": "^2.21.1",
+    "wagmi": "^2.12.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -25,6 +25,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "why-is-node-running": "^3.2.2"
   }
 }
