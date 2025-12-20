@@ -1,189 +1,103 @@
 "use client";
 
 import {useAccount, useSignMessage} from "wagmi";
-import {createClient} from "@supabase/supabase-js";
 import {useState, useEffect} from "react";
+import {supabase} from "@/lib/supabase";
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-
-interface StarRatingProps {
+type Props = {
   serviceId: number;
   currentRating: number;
   ratingCount: number;
   onRatingUpdate: () => void;
-}
+};
 
-export default function StarRating({serviceId, currentRating, ratingCount, onRatingUpdate}: StarRatingProps) {
+export default function StarRating({serviceId, currentRating, ratingCount, onRatingUpdate}: Props) {
   const {address, isConnected} = useAccount();
-  const {signMessageAsync, isPending: isSigning} = useSignMessage();
-  const [userRating, setUserRating] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loadingUserRating, setLoadingUserRating] = useState(true);
+  const {signMessageAsync} = useSignMessage();
+  const [hasVoted, setHasVoted] = useState(false);
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
 
-  // Check if user already rated this service
   useEffect(() => {
-    async function checkUserRating() {
-      if (!isConnected || !address) {
-        setLoadingUserRating(false);
-        return;
-      }
-
-      const {data, error} = await supabase
-        .from("reviews")
-        .select("rating")
-        .eq("service_id", serviceId)
-        .eq("wallet_address", address.toLowerCase())
-        .maybeSingle();
-
+    async function checkVote() {
+      if (!address) return;
+      const {data} = await supabase.from("reviews").select("rating").eq("service_id", serviceId).eq("wallet", address).single();
       if (data) {
+        setHasVoted(true);
         setUserRating(data.rating);
       }
-      setLoadingUserRating(false);
     }
+    checkVote();
+  }, [address, serviceId]);
 
-    checkUserRating();
-  }, [isConnected, address, serviceId]);
-
-  async function handleStarClick(rating: number) {
-    console.log("Star clicked:", rating, {isConnected, address, isSubmitting, userRating});
-    
-    if (!isConnected || !address) {
-      alert("Please connect your wallet to rate.");
-      return;
-    }
-
-    if (isSubmitting || isSigning) {
-      return;
-    }
-
-    // Prevent double vote
-    if (userRating !== null) {
-      return;
-    }
-
-    setIsSubmitting(true);
+  async function submitRating(rating: number) {
+    if (!isConnected || !address) return alert("Connect wallet first");
+    if (hasVoted) return;
 
     try {
-      // Check if wallet already voted on this service_id
-      const {data: existingReview} = await supabase
-        .from("reviews")
-        .select("rating")
-        .eq("service_id", serviceId)
-        .eq("wallet_address", address.toLowerCase())
-        .maybeSingle();
-
-      if (existingReview) {
-        setUserRating(existingReview.rating);
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Create message to sign
       const message = `Rate service ${serviceId} with ${rating} stars`;
-      console.log("Signing message:", message);
-      
-      // Sign the message (free, no gas) using viem/wagmi
-      const signature = await signMessageAsync({
-        message,
-      });
-      console.log("Signature received:", signature);
+      const signature = await signMessageAsync({message});
 
-      // Insert rating into reviews table
-      const {error: insertError} = await supabase.from("reviews").insert({
+      // Insert review
+      const {error: reviewError} = await supabase.from("reviews").insert({
         service_id: serviceId,
-        rating: rating,
-        wallet_address: address.toLowerCase(),
-        signature: signature,
+        wallet: address.toLowerCase(),
+        rating,
       });
 
-      if (insertError) {
-        // If error is due to duplicate, check existing rating
-        if (insertError.code === "23505") {
-          // Unique constraint violation - user already rated
-          const {data} = await supabase
-            .from("reviews")
-            .select("rating")
-            .eq("service_id", serviceId)
-            .eq("wallet_address", address.toLowerCase())
-            .maybeSingle();
-          
-          if (data) {
-            setUserRating(data.rating);
-          }
-          setIsSubmitting(false);
-          return;
-        }
-        throw insertError;
-      }
+      if (reviewError) throw reviewError;
 
-      // Update service rating_sum += rating, rating_count += 1
-      const {data: serviceData} = await supabase
+      // Update service totals
+      // Because supabase-js v2 does not support .raw or database-side increments directly,
+      // we need to fetch the current values and update them in-app:
+      const {data: service, error: fetchError} = await supabase.from("services").select("rating_sum, rating_count").eq("id", serviceId).single();
+
+      if (fetchError) throw fetchError;
+
+      const newRatingSum = (service?.rating_sum ?? 0) + rating;
+      const newRatingCount = (service?.rating_count ?? 0) + 1;
+
+      const {error: updateError} = await supabase
         .from("services")
-        .select("rating_sum, rating_count")
-        .eq("id", serviceId)
-        .single();
+        .update({
+          rating_sum: newRatingSum,
+          rating_count: newRatingCount,
+        })
+        .eq("id", serviceId);
 
-      if (serviceData) {
-        const newRatingSum = (serviceData.rating_sum || 0) + rating;
-        const newRatingCount = (serviceData.rating_count || 0) + 1;
+      if (updateError) throw updateError;
 
-        await supabase
-          .from("services")
-          .update({
-            rating_sum: newRatingSum,
-            rating_count: newRatingCount,
-          })
-          .eq("id", serviceId);
-      }
-
+      setHasVoted(true);
       setUserRating(rating);
-      // Re-load services
       onRatingUpdate();
-    } catch (error) {
-      console.error("Error submitting rating:", error);
-      alert(`Failed to submit rating: ${error instanceof Error ? error.message : "Unknown error"}`);
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      console.error(err);
+      alert("Rating failed");
     }
   }
 
   if (!isConnected) {
-    return null; // Don't show stars if wallet not connected
+    return <p className="text-gray-500 mt-4">Connect wallet to rate</p>;
   }
 
-  if (loadingUserRating) {
-    return <div className="text-sm text-gray-500 mt-2">Loading...</div>;
+  if (hasVoted) {
+    return <p className="text-cyan-400 mt-4">You rated {userRating}★</p>;
   }
 
   return (
-    <div className="mt-4">
-      {userRating !== null ? (
-        <p className="text-sm text-cyan-400">You rated {userRating}★</p>
-      ) : (
-        <div className="flex items-center gap-1">
-          <span className="text-sm text-gray-400 mr-2">Rate:</span>
-          {[1, 2, 3, 4, 5].map((star) => (
-            <button
-              key={star}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleStarClick(star);
-              }}
-              disabled={isSubmitting || isSigning}
-              className={`text-2xl transition-all hover:scale-110 hover:text-yellow-400 ${
-                isSubmitting || isSigning ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"
-              }`}
-              type="button"
-              aria-label={`Rate ${star} stars`}
-            >
-              ☆
-            </button>
-          ))}
-          {(isSubmitting || isSigning) && <span className="text-xs text-gray-500 ml-2">Submitting...</span>}
-        </div>
-      )}
+    <div className="mt-4 flex items-center gap-2">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          onMouseEnter={() => setHoverRating(star)}
+          onMouseLeave={() => setHoverRating(0)}
+          onClick={() => submitRating(star)}
+          className="text-4xl transition"
+        >
+          {hoverRating || star <= currentRating ? "★" : "☆"}
+        </button>
+      ))}
+      <span className="text-gray-500">Click to rate</span>
     </div>
   );
 }
-
