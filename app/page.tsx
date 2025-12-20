@@ -1,25 +1,18 @@
 "use client";
 
-import { createClient } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
-import {
-  RainbowKitProvider,
-  getDefaultConfig,
-  lightTheme,
-  ConnectButton,
-} from "@rainbow-me/rainbowkit";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider } from "wagmi";
-import { base } from "wagmi/chains";
+import {createClient} from "@supabase/supabase-js";
+import {useEffect, useState} from "react";
+import {RainbowKitProvider, getDefaultConfig, lightTheme, ConnectButton} from "@rainbow-me/rainbowkit";
+import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
+import {WagmiProvider} from "wagmi";
+import {base} from "wagmi/chains";
+import StarRating from "./components/StarRating";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
 const config = getDefaultConfig({
   appName: "x402ratings",
-  projectId: "YOUR_WALLETCONNECT_PROJECT_ID", // we replace this next step
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_WALLETCONNECT_PROJECT_ID",
   chains: [base],
 });
 
@@ -31,10 +24,7 @@ export default function Home() {
   const [formOpen, setFormOpen] = useState(false);
 
   async function loadServices() {
-    const { data } = await supabase
-      .from("services")
-      .select("*")
-      .order("rating_count", { ascending: false });
+    const {data} = await supabase.from("services").select("*").order("rating_count", {ascending: false});
     setServices(data || []);
     setLoading(false);
   }
@@ -61,8 +51,7 @@ export default function Home() {
     loadServices();
   }
 
-  if (loading)
-    return <div className="p-16 text-4xl text-center">Loading...</div>;
+  if (loading) return <div className="p-16 text-4xl text-center">Loading...</div>;
 
   return (
     <WagmiProvider config={config}>
@@ -70,9 +59,7 @@ export default function Home() {
         <RainbowKitProvider theme={lightTheme()}>
           <main className="min-h-screen bg-black text-white p-8">
             <h1 className="text-6xl font-bold mb-2">x402ratings.com</h1>
-            <p className="text-xl mb-8 text-cyan-400">
-              The dumbest, fastest reputation layer for x402
-            </p>
+            <p className="text-xl mb-8 text-cyan-400">The dumbest, fastest reputation layer for x402</p>
 
             <div className="mb-8">
               <ConnectButton />
@@ -80,39 +67,16 @@ export default function Home() {
 
             {true && (
               <>
-                <button
-                  onClick={() => setFormOpen(!formOpen)}
-                  className="mb-8 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-xl font-bold"
-                >
+                <button onClick={() => setFormOpen(!formOpen)} className="mb-8 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-xl font-bold">
                   {formOpen ? "Cancel" : "+ Add Service (admin only)"}
                 </button>
 
                 {formOpen && (
-                  <form
-                    onSubmit={addService}
-                    className="bg-gray-900 p-6 rounded-lg mb-8 max-w-2xl"
-                  >
-                    <input
-                      name="url"
-                      placeholder="https://..."
-                      required
-                      className="w-full mb-4 p-3 bg-gray-800 rounded"
-                    />
-                    <input
-                      name="name"
-                      placeholder="Service name"
-                      required
-                      className="w-full mb-4 p-3 bg-gray-800 rounded"
-                    />
-                    <textarea
-                      name="description"
-                      placeholder="Description"
-                      className="w-full mb-4 p-3 bg-gray-800 rounded h-24"
-                    />
-                    <button
-                      type="submit"
-                      className="px-6 py-3 bg-green-600 hover:bg-green-500 rounded font-bold"
-                    >
+                  <form onSubmit={addService} className="bg-gray-900 p-6 rounded-lg mb-8 max-w-2xl">
+                    <input name="url" placeholder="https://..." required className="w-full mb-4 p-3 bg-gray-800 rounded" />
+                    <input name="name" placeholder="Service name" required className="w-full mb-4 p-3 bg-gray-800 rounded" />
+                    <textarea name="description" placeholder="Description" className="w-full mb-4 p-3 bg-gray-800 rounded h-24" />
+                    <button type="submit" className="px-6 py-3 bg-green-600 hover:bg-green-500 rounded font-bold">
                       Submit
                     </button>
                   </form>
@@ -122,48 +86,32 @@ export default function Home() {
 
             <div className="grid gap-6 max-w-4xl">
               {services.length === 0 ? (
-                <p className="text-2xl text-gray-500">
-                  No services yet. Be the first motherfucker.
-                </p>
+                <p className="text-2xl text-gray-500">No services yet. Be the first motherfucker.</p>
               ) : (
                 services.map((s) => (
-                  <div
-                    key={s.id}
-                    className="bg-gray-900 p-6 rounded-lg border border-gray-800 hover:border-cyan-600 transition"
-                  >
+                  <div key={s.id} className="bg-gray-900 p-6 rounded-lg border border-gray-800 hover:border-cyan-600 transition">
                     <div className="flex justify-between items-start">
                       <div>
                         <h2 className="text-3xl font-bold">{s.name}</h2>
-                        <a
-                          href={s.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-cyan-400 hover:underline text-lg"
-                        >
+                        <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline text-lg">
                           {s.url}
                         </a>
-                        {s.description && (
-                          <p className="text-gray-400 mt-2">{s.description}</p>
-                        )}
+                        {s.description && <p className="text-gray-400 mt-2">{s.description}</p>}
                       </div>
                       <div className="text-right">
                         <div className="text-5xl">
-                          {"★".repeat(
-                            s.rating_count === 0
-                              ? 0
-                              : Math.round(s.rating_sum / s.rating_count)
-                          )}
-                          {"☆".repeat(
-                            s.rating_count === 0
-                              ? 5
-                              : 5 - Math.round(s.rating_sum / s.rating_count)
-                          )}
+                          {"★".repeat(s.rating_count === 0 ? 0 : Math.round(s.rating_sum / s.rating_count))}
+                          {"☆".repeat(s.rating_count === 0 ? 5 : 5 - Math.round(s.rating_sum / s.rating_count))}
                         </div>
-                        <p className="text-sm text-gray-500">
-                          {s.rating_count || 0} votes
-                        </p>
+                        <p className="text-sm text-gray-500">{s.rating_count || 0} votes</p>
                       </div>
                     </div>
+                    <StarRating
+                      serviceId={s.id}
+                      currentRating={s.rating_count === 0 ? 0 : Math.round(s.rating_sum / s.rating_count)}
+                      ratingCount={s.rating_count || 0}
+                      onRatingUpdate={loadServices}
+                    />
                   </div>
                 ))
               )}
