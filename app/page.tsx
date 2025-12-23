@@ -12,7 +12,7 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 
 const config = getDefaultConfig({
   appName: "x402ratings",
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_WALLETCONNECT_PROJECT_ID",
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
   chains: [base],
 });
 
@@ -121,4 +121,4 @@ export default function Home() {
       </QueryClientProvider>
     </WagmiProvider>
   );
-} 
+}
