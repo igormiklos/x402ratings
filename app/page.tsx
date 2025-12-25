@@ -7,6 +7,7 @@ import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {WagmiProvider} from "wagmi";
 import {base} from "wagmi/chains";
 import StarRating from "./components/StarRating";
+import {rainbowWallet, walletConnectWallet, metaMaskWallet, ledgerWallet, trustWallet, baseAccount} from "@rainbow-me/rainbowkit/wallets";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
@@ -14,6 +15,12 @@ const config = getDefaultConfig({
   appName: "x402ratings",
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
   chains: [base],
+  wallets: [
+    {
+      groupName: "Recommended",
+      wallets: [metaMaskWallet, rainbowWallet, baseAccount, walletConnectWallet, trustWallet, ledgerWallet],
+    },
+  ],
 });
 
 const queryClient = new QueryClient();
