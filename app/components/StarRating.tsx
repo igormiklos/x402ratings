@@ -21,10 +21,19 @@ export default function StarRating({serviceId, currentRating, ratingCount, onRat
   useEffect(() => {
     async function checkVote() {
       if (!address) return;
-      const {data} = await supabase.from("reviews").select("rating").eq("service_id", serviceId).eq("wallet", address).single();
+      const {data, error} = await supabase
+        .from("reviews")
+        .select("rating")
+        .eq("service_id", serviceId)
+        .eq("wallet", address.toLowerCase())
+        .maybeSingle(); // safe, returns null if no row
+
       if (data) {
         setHasVoted(true);
         setUserRating(data.rating);
+      } else {
+        setHasVoted(false);
+        setUserRating(0);
       }
     }
     checkVote();
